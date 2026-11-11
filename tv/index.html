@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Office Screens TV</title>
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<style>
+/* TV player: one deliberate look, always black. System fonts only, so it works offline. */
+:root{
+  --stage:#000000; --fg:#F3F3F1; --dim:#8E939A; --line:rgba(255,255,255,.28); --chip:rgba(255,255,255,.08);
+  --focus:#FFFFFF; --focus-ink:#000000; --live:#45C985; --warn:#E8AC4A;
+  --f:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--stage);color:var(--fg);font:500 max(16px,1.6vw)/1.35 var(--f);overflow:hidden;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+
+/* picker */
+.picker{position:absolute;inset:0;overflow:auto;padding:6vh max(6vw,env(safe-area-inset-right,0px)) 6vh max(6vw,env(safe-area-inset-left,0px))}
+.picker h1{font-size:max(28px,3.4vw);font-weight:700;letter-spacing:-.01em;margin:0 0 .3em}
+.picker p{color:var(--dim);margin:0 0 1.4em;max-width:46ch}
+.picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,22vw),1fr));gap:1.2vw}
+.pick{display:flex;flex-direction:column;align-items:flex-start;gap:.3em;text-align:left;padding:1.1em 1.2em;border-radius:14px;border:3px solid var(--line);background:var(--chip);cursor:pointer;min-height:44px}
+.pick b{font-size:1.35em;font-weight:700}
+.pick span{color:var(--dim);font-size:.85em}
+.pick:focus,.pick:hover{outline:none;border-color:var(--focus);background:rgba(255,255,255,.16)}
+.pick:focus span{color:var(--fg)}
+.picker-msg{color:var(--dim)}
+
+/* stage */
+.stage{position:absolute;inset:0}
+.layer{position:absolute;inset:0;opacity:0;transition:opacity 1s ease}
+.layer.on{opacity:1}
+.layer img,.layer video{display:block;width:100%;height:100%;object-fit:contain;background:var(--stage)}
+.stage[data-fit="cover"] .layer img,.stage[data-fit="cover"] .layer video{object-fit:cover}
+.msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6em;text-align:center;padding:10vh 12vw;color:var(--dim)}
+.msg b{font-size:max(22px,2.6vw);font-weight:700;color:var(--fg);max-width:30ch}
+.msg span{max-width:46ch}
+.bar{width:min(480px,40vw);height:6px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--fg);transition:width .4s}
+.blackout{position:absolute;inset:0;background:var(--stage);opacity:0;pointer-events:none;transition:opacity .6s}
+.blackout.on{opacity:1}
+
+/* remote overlay */
+.ov{position:absolute;left:0;right:0;bottom:0;padding:8vh 4vw calc(4vh + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,0));opacity:0;visibility:hidden;transition:opacity .35s,visibility 0s .35s}
+.ov.show{opacity:1;visibility:visible;transition:opacity .2s}
+.ov-in{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1em}
+.eyebrow{font-size:.75em;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:0 0 .5em}
+.name{font-size:max(22px,2.4vw);font-weight:700;margin:0 0 .3em}
+.net{font-size:.85em;color:var(--dim);display:flex;align-items:center;gap:.5em}
+.net i{width:.6em;height:.6em;border-radius:50%;background:var(--live)}
+.net.off i{background:var(--warn)}
+.btns{display:flex;flex-wrap:wrap;gap:.6em}
+.btns button{min-height:44px;padding:.7em 1.4em;font-weight:600;border-radius:999px;border:2px solid var(--line);background:var(--chip);cursor:pointer}
+.btns button:focus,.btns button:hover{outline:none;background:var(--focus);color:var(--focus-ink);border-color:var(--focus)}
+.player.idle{cursor:none}
+
+@media (prefers-reduced-motion:reduce){ .layer,.blackout,.ov,.bar i{transition:none} }
+</style>
+</head>
+<body>
+<section id="picker" class="picker" hidden>
+  <h1>Which TV is this?</h1>
+  <p>Pick what this TV should show. It remembers, so next time this page opens straight into it.</p>
+  <div id="picks" class="picks"></div>
+  <p id="pickMsg" class="picker-msg" hidden></p>
+</section>
+
+<section id="player" class="player" hidden>
+  <div id="stage" class="stage" data-fit="contain">
+    <div class="layer"></div><div class="layer"></div>
+    <div id="msg" class="msg" hidden><b id="msgTitle"></b><span id="msgText"></span><div class="bar" id="msgBar" hidden><i id="msgFill"></i></div></div>
+    <div id="blackout" class="blackout"></div>
+  </div>
+  <div id="ov" class="ov">
+    <div class="ov-in">
+      <div>
+        <p class="eyebrow">Office Screens</p>
+        <p class="name" id="ovName"></p>
+        <p class="net" id="ovNet"><i></i><span id="ovNetText"></span></p>
+      </div>
+      <div class="btns">
+        <button type="button" id="bFull">Full screen</button>
+        <button type="button" id="bNext">Next</button>
+        <button type="button" id="bChange">Change TV</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="../config.js"></script>
+<script src="tv.js"></script>
+</body>
+</html>

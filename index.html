@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Office Screens</title>
+<meta name="description" content="Control what plays on the office TVs.">
+<meta name="theme-color" content="#EDEFF2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1014" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Screens">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="top" id="topbar">
+  <div class="top-in">
+    <a class="brand" href="#screens"><span class="brand-mark" aria-hidden="true"></span>Office Screens</a>
+    <div class="top-actions">
+      <button class="btn btn-sm" id="allBtn" type="button" hidden>All off</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="viewLoading" class="view">
+    <p class="loading" id="loadingMsg">Loading…</p>
+  </section>
+
+  <section id="viewAuth" class="view" hidden>
+    <div class="auth">
+      <div>
+        <h1 id="authTitle">Sign in</h1>
+        <p class="sub" id="authSub">Sign in to change what plays on the office TVs.</p>
+      </div>
+      <form class="auth-card" id="authForm" autocomplete="on" novalidate>
+        <div class="field">
+          <label for="authEmail">Email</label>
+          <input id="authEmail" type="email" autocomplete="email" inputmode="email" required>
+        </div>
+        <div class="field">
+          <label for="authPass">Password</label>
+          <input id="authPass" type="password" autocomplete="current-password" minlength="8" required>
+          <p class="hint" id="passHint" hidden>At least 8 characters.</p>
+        </div>
+        <div class="field" id="codeField" hidden>
+          <label for="authCode">Setup code</label>
+          <input id="authCode" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="JOY-XXXX-XXXX">
+          <p class="hint">The one-time code from Claude. It makes this login the one that controls the TVs.</p>
+        </div>
+        <p class="form-msg" id="authMsg" role="alert" hidden></p>
+        <button class="btn btn-primary btn-block" type="submit" id="authSubmit">Sign in</button>
+      </form>
+      <p class="auth-switch" id="authSwitch"><span id="authSwitchText">First time here?</span> <button type="button" class="linkbtn" id="authToggle">Create your login</button></p>
+    </div>
+  </section>
+
+  <section id="viewDenied" class="view" hidden>
+    <div class="empty" style="margin-top:24px">
+      <h2>This login can't change the TVs</h2>
+      <p id="deniedText">You're signed in, but this account hasn't been given access to Office Screens.</p>
+      <div><button class="btn" type="button" id="deniedOut">Sign out</button></div>
+    </div>
+  </section>
+
+  <section id="viewScreens" class="view" hidden>
+    <div class="sec-head"><h1>Screens</h1><p class="sub" id="screensSub"></p></div>
+    <div id="screenList" class="screen-list"></div>
+    <div id="emptyScreens" class="empty" hidden>
+      <h2>No TVs yet</h2>
+      <ol class="how">
+        <li><b>Add a TV</b> below and name it after where it hangs.</li>
+        <li><b>Choose what it plays:</b> one video nonstop, or a slideshow of photos, videos and slides.</li>
+        <li><b>On the TV</b>, open the TV address in the web browser and pick it.</li>
+      </ol>
+    </div>
+    <form id="addForm" class="add-form" autocomplete="off">
+      <label for="newName" class="lbl">Add a TV</label>
+      <div class="add-row">
+        <input id="newName" type="text" maxlength="40" placeholder="Lobby, Waiting room…" required>
+        <button class="btn btn-primary" type="submit">Add</button>
+      </div>
+    </form>
+    <section class="panel">
+      <h2>TV address</h2>
+      <p>Open this in each TV's web browser, then pick which TV it is. No sign-in needed on the TV.</p>
+      <div class="link-row"><code id="tvAddrList"></code><button class="btn btn-sm" type="button" data-act="copy-addr">Copy</button></div>
+    </section>
+    <div class="foot"><span id="whoLine"></span><button class="btn btn-ghost btn-sm" type="button" id="signOut">Sign out</button></div>
+  </section>
+
+  <section id="viewEdit" class="view" hidden>
+    <a class="back" href="#screens">‹ All screens</a>
+    <div id="edMissing" class="empty" hidden><h2>This TV was removed</h2><p><a href="#screens">Back to all screens</a></p></div>
+    <div id="edBody">
+      <div class="ed-top">
+        <input id="edName" class="ed-name" type="text" maxlength="40" aria-label="TV name">
+        <button class="switch" id="edPower" role="switch" aria-checked="true" type="button" aria-label="Screen on"><span></span></button>
+      </div>
+      <div class="ed-state" id="edState"></div>
+      <div class="hero">
+        <div class="monitor lg" id="edMonitor"><span class="glass" id="edGlass"></span><span class="led" id="edLed"></span></div>
+        <p class="meta" id="edStats"></p>
+      </div>
+
+      <div class="mode">
+        <span class="lbl" id="modeLbl">What this TV plays</span>
+        <div class="seg wide" role="group" aria-labelledby="modeLbl">
+          <button type="button" id="modeVideo" aria-pressed="false">One video, nonstop</button>
+          <button type="button" id="modeLoop" aria-pressed="true">Slideshow</button>
+        </div>
+      </div>
+
+      <div id="videoSection" hidden>
+        <div class="sec-head row"><h2>Video</h2></div>
+        <div class="uploads" id="uploadsV" aria-live="polite"></div>
+        <div id="vcard"></div>
+      </div>
+
+      <div class="settings">
+        <div class="set-row">
+          <span class="set-name" id="fitLbl">Fit to screen</span>
+          <div class="seg" role="group" aria-labelledby="fitLbl">
+            <button type="button" id="fitContain" aria-pressed="true">Show whole</button>
+            <button type="button" id="fitCover" aria-pressed="false">Fill screen</button>
+          </div>
+          <p class="set-hint">Fill screen crops the edges so there are no black bars.</p>
+        </div>
+        <div class="set-row" id="secRow">
+          <label class="set-name" for="edSec">Seconds per photo</label>
+          <select id="edSec">
+            <option value="3">3 s</option><option value="5">5 s</option><option value="8">8 s</option><option value="10">10 s</option><option value="12">12 s</option>
+            <option value="15">15 s</option><option value="20">20 s</option><option value="30">30 s</option><option value="45">45 s</option><option value="60">60 s</option>
+          </select>
+          <p class="set-hint">Photos you've timed one by one keep their own time.</p>
+        </div>
+        <div class="set-row">
+          <span class="set-name" id="sndLbl">Video sound</span>
+          <button class="switch" id="edSound" role="switch" aria-checked="false" type="button" aria-labelledby="sndLbl"><span></span></button>
+          <p class="set-hint">The TV needs one press of OK on its remote before it's allowed to play sound.</p>
+        </div>
+      </div>
+
+      <div id="loopSection">
+        <div class="sec-head row"><h2>Slideshow</h2><span class="meta" id="edCount"></span></div>
+        <div id="uploads" class="uploads" aria-live="polite"></div>
+        <ol id="items" class="items"></ol>
+        <div id="itemsEmpty" class="empty small" hidden><p>The slideshow is empty. Add photos, videos, or a PDF of your slides with the buttons at the bottom.</p></div>
+      </div>
+
+      <section class="panel">
+        <h2>Put it on the TV</h2>
+        <ol class="how">
+          <li>On the TV, open the <b>Silk Browser</b> and go to the address below.</li>
+          <li>Choose <b id="edNameInline"></b>.</li>
+          <li>Press OK on the remote and pick <i>Full screen</i>. Bookmark the page so it's one click after a restart.</li>
+        </ol>
+        <div class="link-row"><code id="tvAddr"></code><button class="btn btn-sm" type="button" data-act="copy-addr">Copy</button></div>
+        <p class="meta" id="tvReport"></p>
+        <div class="panel-actions"><a class="btn" id="previewBtn" href="tv/" target="_blank" rel="noopener">Preview on this device</a></div>
+      </section>
+      <div class="danger-zone"><button class="btn btn-ghost danger" type="button" id="removeTv">Remove this TV</button></div>
+    </div>
+  </section>
+</main>
+
+<div class="addbar" id="addbar" hidden>
+  <div class="addbar-in">
+    <button class="btn btn-primary grow" type="button" id="uploadBtn">Add photos, videos, PDF</button>
+    <button class="btn" type="button" id="libBtn">Library</button>
+  </div>
+  <input id="fileIn" type="file" multiple hidden>
+</div>
+
+<div id="libSheet" class="sheet-bg" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="libTitle">
+    <div class="sheet-head"><h2 id="libTitle">Library</h2><button class="btn btn-ghost btn-sm" id="libClose" type="button">Close</button></div>
+    <p class="meta sheet-sub" id="libUsage"></p>
+    <div class="lib-grid" id="libGrid"></div>
+    <p class="empty small" id="libEmpty" style="margin:0 16px 16px" hidden>Nothing uploaded yet.</p>
+    <div class="sheet-foot">
+      <button class="btn btn-ghost danger" id="libDelete" type="button" disabled>Delete</button>
+      <button class="btn btn-primary" id="libAdd" type="button" disabled>Add to slideshow</button>
+    </div>
+  </div>
+</div>
+
+<div id="confirmSheet" class="sheet-bg center" hidden>
+  <div class="sheet dialog" role="alertdialog" aria-modal="true" aria-labelledby="cfTitle" aria-describedby="cfBody">
+    <h2 id="cfTitle"></h2>
+    <p id="cfBody"></p>
+    <div class="sheet-foot"><button class="btn" id="cfNo" type="button">Cancel</button><button class="btn btn-danger" id="cfYes" type="button">Delete</button></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
