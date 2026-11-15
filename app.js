@@ -31,6 +31,9 @@ function setSwitch(el, on) { el.setAttribute('aria-checked', on ? 'true' : 'fals
 function pub(path) { return CFG.url + '/storage/v1/object/public/' + CFG.bucket + '/' + String(path).split('/').map(encodeURIComponent).join('/'); }
 function baseUrl() { return location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, ''); }
 function tvAddress() { return baseUrl() + 'tv/'; }
+var SCH = window.OSSchedule || null;
+var SCH_DEFAULT = { on: true, days: [1, 2, 3, 4, 5], start: '08:00', end: '18:00', tz: 'America/Detroit' };
+function sleeping(s) { return !!(SCH && s && s.power && !SCH.isOnNow(s.schedule)); }
 function shortAddr(u) { return u.replace(/^https?:\/\//, '').replace(/\/$/, ''); }
 
 if (!window.supabase || !CFG) {
@@ -252,6 +255,7 @@ function statusOf(id) {
   var s = S.screens[id] || {}, c = lastCheckin(id);
   var fresh = c && (Date.now() - c.t) <= LIVE_MS;
   if (!s.power) return { cls: 'off', label: fresh ? 'Off · TV connected' : 'Off' };
+  if (sleeping(s)) { var nx = SCH.nextOn(s.schedule); return { cls: 'off', label: 'Sleeping' + (nx ? ' until ' + nx : '') }; }
   if (!c) return { cls: 'wait', label: 'Waiting for a TV' };
   if (!fresh) return { cls: 'stale', label: 'Last seen ' + ago(c.t) };
   var info = c.info || {};
@@ -272,6 +276,10 @@ function glassHTML(s, emptyText, big) {
   return '<span class="glass-empty">' + esc(emptyText || '') + '</span>';
 }
 function summary(s) {
+  var sc = SCH ? SCH.describe(s.schedule) : '';
+  return baseSummary(s) + (sc ? ' · on ' + sc : '');
+}
+function baseSummary(s) {
   if (s.mode === 'video') return s.video ? 'One video · ' + fmtDur(s.video.dur) + ' on repeat' : 'One video · none chosen';
   var n = (s.items || []).length;
   return 'Slideshow · ' + plural(n, 'item') + (n ? ' · ' + fmtDur(loopSec(s)) : '');
@@ -369,6 +377,7 @@ function renderEdit() {
   $('#edGlass').innerHTML = glassHTML(s, isVideo ? 'No video chosen' : 'Empty slideshow', true);
   $('#edMonitor').classList.toggle('is-off', !s.power);
   $('#edStats').textContent = summary(s);
+  renderSchedule(s);
   $('#modeVideo').setAttribute('aria-pressed', isVideo ? 'true' : 'false');
   $('#modeLoop').setAttribute('aria-pressed', isVideo ? 'false' : 'true');
   $('#videoSection').hidden = !isVideo;
@@ -392,6 +401,45 @@ function renderEdit() {
   $('#uploadBtn').textContent = isVideo ? 'Upload a video' : 'Add photos, videos, PDF';
   $('#libBtn').disabled = !S.media.length;
   renderEditStatus();
+}
+function renderSchedule(s) {
+  var sc = s.schedule && typeof s.schedule === 'object' ? s.schedule : null, on = !!(sc && sc.on);
+  setSwitch($('#edSched'), on);
+  $('#schedBody').hidden = !on;
+  if (!on) return;
+  var days = sc.days || [];
+  Array.prototype.forEach.call(document.querySelectorAll('#schDays [data-day]'), function (b) {
+    b.setAttribute('aria-pressed', days.indexOf(+b.getAttribute('data-day')) >= 0 ? 'true' : 'false');
+  });
+  var a = $('#schStart'), b2 = $('#schEnd');
+  if (document.activeElement !== a) a.value = sc.start || SCH_DEFAULT.start;
+  if (document.activeElement !== b2) b2.value = sc.end || SCH_DEFAULT.end;
+}
+function setSchedule(patch, delay) {
+  var id = S.editId, s = S.screens[id]; if (!s) return;
+  var next = clone(s.schedule && typeof s.schedule === 'object' ? s.schedule : SCH_DEFAULT);
+  Object.keys(patch).forEach(function (k) { next[k] = patch[k]; });
+  changeScreen(id, { schedule: next }, delay);
+}
+function onSchedToggle() {
+  var s = S.screens[S.editId]; if (!s) return;
+  var on = !(s.schedule && s.schedule.on);
+  setSchedule({ on: on });
+  if (on) toast('Schedule on: ' + (SCH ? SCH.describe(S.screens[S.editId].schedule) : '') + '.');
+}
+function onSchedDay(day) {
+  var s = S.screens[S.editId]; if (!s || !s.schedule) return;
+  var days = (s.schedule.days || []).slice(), i = days.indexOf(day);
+  if (i >= 0) { if (days.length === 1) { toast('Keep at least one day, or turn the schedule off.'); return; } days.splice(i, 1); }
+  else days.push(day);
+  days.sort();
+  setSchedule({ days: days }, 600);
+}
+function onSchedTime() {
+  var start = $('#schStart').value, end = $('#schEnd').value;
+  if (!SCH || SCH.toMin(start) == null || SCH.toMin(end) == null) return;
+  if (start === end) { toast('On and off times need to be different.', 'error'); renderEdit(); return; }
+  setSchedule({ start: start, end: end }, 600);
 }
 function renderEditStatus() {
   var id = S.editId, s = S.screens[id]; if (!s) return;
@@ -780,6 +828,10 @@ function bind() {
   $('#modeVideo').addEventListener('click', function () { setMode('video'); });
   $('#modeLoop').addEventListener('click', function () { setMode('loop'); });
   $('#edSec').addEventListener('change', onSec);
+  $('#edSched').addEventListener('click', onSchedToggle);
+  $('#schDays').addEventListener('click', function (e) { var b = e.target.closest ? e.target.closest('[data-day]') : null; if (b) onSchedDay(+b.getAttribute('data-day')); });
+  $('#schStart').addEventListener('change', onSchedTime);
+  $('#schEnd').addEventListener('change', onSchedTime);
   $('#uploadBtn').addEventListener('click', function () { var s = S.screens[S.editId]; pickFiles(s && s.mode === 'video' ? 'video' : 'loop'); });
   $('#fileIn').addEventListener('change', function () {
     var fs = Array.prototype.slice.call(this.files || []), target = this.dataset.target || 'loop'; this.value = '';

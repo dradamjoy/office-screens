@@ -12,6 +12,7 @@ Phone-controlled looping displays for the office TVs.
 - The TV saves every file it needs on the TV itself and plays from the saved copies, so it keeps playing when the internet drops. The page also works offline after a restart (service worker).
 - TVs check for changes every 10 seconds and check in once a minute, so the control panel can show whether each TV is playing.
 - The power switch blacks out the screen. It does not turn the TV's power off.
+- Each TV can run **on a schedule** (days plus on and off times, in Michigan time). Outside those hours the screen goes black on its own and the panel shows *Sleeping until …*. The TV works this out from its own clock, so the schedule holds when the internet is down. The power switch still wins: off is off.
 
 ## Backend (Supabase project `office-screens`)
 
@@ -35,9 +36,16 @@ insert into private.setup_codes (code) values ('JOY-XXXX-XXXX');
 
 The free Supabase plan accepts files up to 50 MB. On the Pro plan, raise the limit in Supabase (Storage > Settings) and update `maxFileMB` in `config.js`.
 
+The on/off schedule is stored in `screens.schedule` (jsonb, null when there is no schedule):
+
+```sql
+alter table public.screens add column if not exists schedule jsonb;
+```
+
 ## Files
 
 - `index.html`, `app.js`, `app.css`: control panel
 - `tv/index.html`, `tv/tv.js`: TV player
 - `tv/sw.js`: keeps the TV page available offline
 - `config.js`: Supabase address and public key
+- `schedule.js`: on/off schedule rules, shared by the panel and the TV player

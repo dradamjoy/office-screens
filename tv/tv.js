@@ -140,6 +140,9 @@ function wanted(cfg) {
   all.forEach(function (it) { if (!seen[it.url]) { seen[it.url] = true; out.push(it.url); } });
   return out;
 }
+// On only when the power switch is on AND the schedule (if any) says these are open hours.
+function schedOn(cfg) { return !window.OSSchedule || window.OSSchedule.isOnNow(cfg && cfg.schedule); }
+function isOn(cfg) { return !!(cfg && cfg.power) && schedOn(cfg); }
 function isReady(url) { return PREVIEW || !HAS_CACHE || !!P.cached[url] || !!P.direct[url]; }
 
 /* ---------- start / stop ---------- */
@@ -303,7 +306,7 @@ async function dropSaved(url) {
 function refresh() {
   if (!P.active || !P.cfg) return;
   var cfg = P.cfg;
-  if (!cfg.power) {
+  if (!isOn(cfg)) {
     if (!P.off) { P.off = true; stopPlayback(); P.sig = ''; hideMsg(); $('#blackout').classList.add('on'); }
     return;
   }
@@ -373,7 +376,7 @@ function playSingle(it) {
   }, function () { if (tk === P.token) { P.cur = null; P.sig = ''; P.timer = setTimeout(refresh, 2000); } });
 }
 function next() {
-  if (!P.active || !P.cfg || !P.cfg.power) return;
+  if (!P.active || !P.cfg || !isOn(P.cfg)) return;
   var list = P.list || []; if (!list.length) return;
   clearTimeout(P.timer);
   var tk = ++P.token; P.curMode = 'loop';
@@ -433,7 +436,7 @@ function showMsg(title, text, pct) {
 }
 function hideMsg() { $('#msg').hidden = true; }
 function updateMsg() {
-  if (!P.active || !P.cfg || P.removed || !P.cfg.power) return;
+  if (!P.active || !P.cfg || P.removed || !isOn(P.cfg)) return;
   var list = activeList(P.cfg); if (!list.length) return;
   if (list.some(function (it) { return isReady(it.url); })) return;
   if (P.dl) {
@@ -458,7 +461,7 @@ function netLabel() {
 /* ---------- check-ins ---------- */
 function stateInfo() {
   var cfg = P.cfg || {}, want = wanted(cfg), have = want.filter(function (u) { return !!P.cached[u]; }).length;
-  var st = !cfg.power ? 'off' : !activeList(cfg).length ? 'empty' : P.err === 'play' ? 'error' : P.cur ? 'playing' : (P.dl || P.syncing) ? 'downloading' : 'waiting';
+  var st = !cfg.power ? 'off' : !schedOn(cfg) ? 'sleeping' : !activeList(cfg).length ? 'empty' : P.err === 'play' ? 'error' : P.cur ? 'playing' : (P.dl || P.syncing) ? 'downloading' : 'waiting';
   var dpr = window.devicePixelRatio || 1;
   return {
     state: st, pct: P.dl ? P.dl.pct : null, have: have, need: want.length, mode: cfg.mode || null,
@@ -547,6 +550,11 @@ window.addEventListener('offline', function () { setOnline(false); });
 $('#bFull').addEventListener('click', onFull);
 $('#bNext').addEventListener('click', function () { if (P.curMode === 'loop') next(); showOverlay(5000, false); });
 $('#bChange').addEventListener('click', onChange);
+// Follow the on/off schedule from the TV's own clock, so it works offline too.
+setInterval(function () {
+  if (view !== 'player' || !P.active || !P.cfg) return;
+  if (isOn(P.cfg) === P.off) { refresh(); checkin(true); }
+}, 20000);
 // Reload once a day in the small hours so the TV picks up app updates and starts fresh.
 setInterval(function () {
   var h = new Date().getHours();

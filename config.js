@@ -9,5 +9,5 @@ window.OS_CONFIG = {
   // Largest file Supabase accepts. Free plan: 50 MB. On Pro, raise the limit in
   // Supabase (Storage > Settings) and change this number to match.
   maxFileMB: 50,
-  version: '1.0.0'
+  version: '1.1.0'
 };

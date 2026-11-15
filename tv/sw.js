@@ -1,7 +1,7 @@
 /* Keeps the TV page itself available offline, so the bookmark still opens after a
    restart with no internet. Videos and photos are saved by tv.js, not here. */
-var SHELL = 'os-shell-v1';
-var FILES = ['./', './tv.js', '../config.js', '../icon.svg'];
+var SHELL = 'os-shell-v2';
+var FILES = ['./', './tv.js', '../config.js', '../schedule.js', '../icon.svg'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(SHELL).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); }));
