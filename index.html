@@ -144,6 +144,21 @@
           <button class="switch" id="edSound" role="switch" aria-checked="false" type="button" aria-labelledby="sndLbl"><span></span></button>
           <p class="set-hint">The TV needs one press of OK on its remote before it's allowed to play sound.</p>
         </div>
+        <div class="set-row">
+          <span class="set-name" id="schLbl">On a schedule</span>
+          <button class="switch" id="edSched" role="switch" aria-checked="false" type="button" aria-labelledby="schLbl"><span></span></button>
+          <p class="set-hint" id="schHint">Outside these hours the screen goes black on its own. The switch at the top still turns it off any time.</p>
+          <div class="sched" id="schedBody" hidden>
+            <div class="days" role="group" aria-label="Days it's on" id="schDays">
+              <button type="button" data-day="1" aria-pressed="false">Mon</button><button type="button" data-day="2" aria-pressed="false">Tue</button><button type="button" data-day="3" aria-pressed="false">Wed</button><button type="button" data-day="4" aria-pressed="false">Thu</button><button type="button" data-day="5" aria-pressed="false">Fri</button><button type="button" data-day="6" aria-pressed="false">Sat</button><button type="button" data-day="0" aria-pressed="false">Sun</button>
+            </div>
+            <div class="times">
+              <label for="schStart">On at <input id="schStart" type="time" step="900" value="08:00"></label>
+              <label for="schEnd">Off at <input id="schEnd" type="time" step="900" value="18:00"></label>
+            </div>
+            <p class="set-hint">Office time (Michigan). The TV follows this from its own clock, even offline.</p>
+          </div>
+        </div>
       </div>
 
       <div id="loopSection">
@@ -202,6 +217,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
+<script src="schedule.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
