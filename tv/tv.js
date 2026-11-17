@@ -341,15 +341,21 @@ function armImage(it, tk) {
 }
 function makeVideo(src, loop) {
   var v = document.createElement('video');
-  v.muted = !(P.cfg && P.cfg.sound && P.unlocked);
+  // With sound on, try playing out loud first; playV falls back to muted if the browser refuses.
+  v.muted = !(P.cfg && P.cfg.sound);
   v.playsInline = true; v.setAttribute('playsinline', ''); v.autoplay = true; v.preload = 'auto'; v.loop = !!loop;
   v.src = src;
   return v;
 }
 function playV(v) {
+  var loud = !v.muted;
   var pr = v.play();
-  if (pr && pr.catch) pr.catch(function () { v.muted = true; var p2 = v.play(); if (p2 && p2.catch) p2.catch(function () {}); });
+  if (pr && pr.then) pr.then(function () { if (loud) P.unlocked = true; }, function () {
+    v.muted = true; var p2 = v.play(); if (p2 && p2.catch) p2.catch(function () {});
+  });
 }
+// Any press on the remote (or a tap) lets the browser play sound.
+function unlockSound() { if (!P.unlocked) { P.unlocked = true; applySound(); } }
 function videoFailed(it, tk) {
   if (tk !== P.token) return;
   if (!P.retried[it.url] && !PREVIEW && HAS_CACHE) {
@@ -520,6 +526,7 @@ async function requestWake() {
 function onKey(e) {
   if (view === 'picker') { pickerKeys(e); return; }
   if (view !== 'player') return;
+  unlockSound();
   var ov = $('#ov');
   if (!ov.classList.contains('show')) {
     showOverlay(8000, true);
@@ -541,6 +548,7 @@ document.addEventListener('click', function (e) {
   var b = e.target.closest ? e.target.closest('.pick') : null;
   if (b) choose(b.getAttribute('data-id'));
 });
+document.addEventListener('pointerdown', function () { if (view === 'player') unlockSound(); }, { passive: true });
 ['pointermove', 'pointerdown'].forEach(function (t) { document.addEventListener(t, function () { if (view === 'player') showOverlay(5000, false); }, { passive: true }); });
 document.addEventListener('fullscreenchange', fsLabel);
 document.addEventListener('webkitfullscreenchange', fsLabel);
